@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Public Goods Game</title>
+    <link rel="stylesheet" href="styles.css">
+    <link href="https://fonts.googleapis.com/css2?family=Roboto:wght@300;400;500;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header>
+        <div class="container">
+            <h1>Public Goods Game</h1>
+            <div class="wallet-info">
+                <button id="connect-wallet" class="btn">Connect Wallet</button>
+                <div id="wallet-address" class="hidden">
+                    <span id="address-text"></span>
+                    <span id="wallet-balance"></span>
+                </div>
+            </div>
+        </div>
+    </header>
+
+    <main class="container">
+        <section id="game-info" class="card">
+            <h2>How It Works</h2>
+            <div class="info-grid">
+                <div class="info-item">
+                    <h3>Stake</h3>
+                    <p>Contribute GameCoin to the common pool (1 GameCoin = 0.001 Sepolia ETH)</p>
+                </div>
+                <div class="info-item">
+                    <h3>Vote</h3>
+                    <p>Vote on a slider from 0 to 1 to determine the distribution mechanism</p>
+                </div>
+                <div class="info-item">
+                    <h3>Distribution</h3>
+                    <p>Funds are distributed based on the weighted average of all votes</p>
+                </div>
+                <div class="info-item">
+                    <h3>Voting Constant</h3>
+                    <p>Determines how much is distributed proportionally vs. evenly split</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="game-status" class="card hidden">
+            <h2>Current Round Information</h2>
+            <div class="status-grid">
+                <div class="status-item">
+                    <h3>Round</h3>
+                    <p id="current-round">-</p>
+                </div>
+                <div class="status-item">
+                    <h3>Status</h3>
+                    <p id="round-status">-</p>
+                </div>
+                <div class="status-item">
+                    <h3>Time Remaining</h3>
+                    <p id="time-remaining">-</p>
+                </div>
+                <div class="status-item">
+                    <h3>Total Staked</h3>
+                    <p id="total-staked">-</p>
+                </div>
+                <div class="status-item">
+                    <h3>Participants</h3>
+                    <p id="participant-count">-</p>
+                </div>
+                <div class="status-item">
+                    <h3>Current Vote Constant</h3>
+                    <p id="voting-constant">-</p>
+                </div>
+            </div>
+        </section>
+
+        <section id="game-participation" class="card hidden">
+            <h2>Participate in Current Round</h2>
+            <div class="participation-form">
+                <div class="input-group">
+                    <label for="stake-amount">Stake Amount (GameCoin)</label>
+                    <input type="number" id="stake-amount" min="10" step="1" value="10">
+                    <span class="helper-text">Minimum stake: 10 GameCoin</span>
+                </div>
+                
+                <div class="input-group">
+                    <label for="vote-value">Vote Value: <span id="vote-display">0.5</span></label>
+                    <input type="range" id="vote-value" min="0" max="1" step="0.01" value="0.5">
+                    <div class="slider-labels">
+                        <span>0 (All Split Evenly)</span>
+                        <span>1 (All Proportional)</span>
+                    </div>
+                </div>
+                
+                <div class="button-group">
+                    <button id="register-btn" class="btn btn-primary">Register & Stake</button>
+                    <button id="vote-btn" class="btn btn-secondary" disabled>Cast Vote</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="distribution-explainer" class="card">
+            <h2>Distribution Example</h2>
+            <div class="explainer-content">
+                <div class="explainer-text">
+                    <p>If the voting constant is <span id="example-constant">0.75</span>:</p>
+                    <ul>
+                        <li><span id="proportional-percent">75%</span> of the pool is distributed proportionally to each participant's stake</li>
+                        <li><span id="even-percent">25%</span> of the pool is distributed evenly among all participants</li>
+                    </ul>
+                </div>
+                <div class="distribution-visual">
+                    <div id="proportional-bar" style="width: 75%;">Proportional: <span id="proportional-amount">75%</span></div>
+                    <div id="even-bar" style="width: 25%;">Even Split: <span id="even-amount">25%</span></div>
+                </div>
+            </div>
+        </section>
+
+        <section id="admin-panel" class="card hidden">
+            <h2>Admin Controls</h2>
+            <div class="admin-controls">
+                <div class="admin-action">
+                    <button id="start-registration" class="btn btn-admin">Start Registration Phase</button>
+                </div>
+                <div class="admin-action">
+                    <button id="start-round" class="btn btn-admin" disabled>Start Round</button>
+                    <span class="helper-text">Requires at least 3 participants</span>
+                </div>
+                <div class="admin-action">
+                    <button id="end-round" class="btn btn-admin" disabled>End Round</button>
+                </div>
+                <div class="admin-action">
+                    <button id="distribute-funds" class="btn btn-admin" disabled>Distribute Funds</button>
+                </div>
+            </div>
+        </section>
+
+        <section id="past-rounds" class="card hidden">
+            <h2>Past Rounds</h2>
+            <div class="round-list">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Round</th>
+                            <th>Participants</th>
+                            <th>Total Staked</th>
+                            <th>Voting Constant</th>
+                            <th>Status</th>
+                        </tr>
+                    </thead>
+                    <tbody id="past-rounds-body">
+                        <!-- Will be populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <section id="my-participation" class="card hidden">
+            <h2>My Participation</h2>
+            <div class="my-stats">
+                <div class="stat-item">
+                    <h3>Total Staked</h3>
+                    <p id="my-total-staked">0 GameCoin</p>
+                </div>
+                <div class="stat-item">
+                    <h3>Rounds Participated</h3>
+                    <p id="my-rounds">0</p>
+                </div>
+                <div class="stat-item">
+                    <h3>Rewards Earned</h3>
+                    <p id="my-rewards">0 GameCoin</p>
+                </div>
+            </div>
+            <div class="my-rounds-list">
+                <h3>My Round History</h3>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Round</th>
+                            <th>Stake</th>
+                            <th>Vote</th>
+                            <th>Reward</th>
+                        </tr>
+                    </thead>
+                    <tbody id="my-rounds-body">
+                        <!-- Will be populated dynamically -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+    </main>
+
+    <footer>
+        <div class="container">
+            <p>Public Goods Game on Sepolia Testnet | <a href="https://github.com/yourusername/public-goods-game" target="_blank">Source Code</a></p>
+        </div>
+    </footer>
+
+    <!-- Modal for transaction confirmation -->
+    <div id="tx-modal" class="modal hidden">
+        <div class="modal-content">
+            <span class="close-modal">&times;</span>
+            <h2>Transaction Pending</h2>
+            <div id="tx-details">
+                <p>Transaction hash: <span id="tx-hash"></span></p>
+                <div class="loader"></div>
+                <p id="tx-status">Processing...</p>
+            </div>
+            <div id="tx-success" class="hidden">
+                <p>Transaction confirmed!</p>
+                <button id="tx-close" class="btn">Close</button>
+            </div>
+            <div id="tx-error" class="hidden">
+                <p>Transaction failed:</p>
+                <p id="tx-error-message"></p>
+                <button id="tx-retry" class="btn">Retry</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/web3/4.0.3/web3.min.js"></script>
+    <script src="app.js"></script>
+</body>
+</html>
