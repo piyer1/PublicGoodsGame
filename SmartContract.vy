@@ -103,13 +103,13 @@ def _initializeRound(id: uint256):
         participants: []
     })
 
-# Purchase GameCoin with ETH
+# Purchase GameCoin with specified ETH amount
 @payable
 @external
-def purchaseGameCoin():
+def purchaseGameCoin(ethAmount: uint256):
     assert not (self.isRoundActive and self.users[msg.sender].registered), "Cannot purchase during active round"
+    assert msg.value == ethAmount, "Sent ETH does not match specified amount"
     
-    ethAmount: uint256 = msg.value
     gameCoinAmount: uint256 = ethAmount * CONVERSION_RATE
     
     # Add GameCoin to user's balance
