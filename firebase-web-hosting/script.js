@@ -569,26 +569,27 @@ document.addEventListener('DOMContentLoaded', function() {
     // Submit vote
     async function submitVote() {
         try {
-            const vote = voteValue.value;
-            if (!vote || vote < 0 || vote > 1000) {
-                showStatus(voteStatus, "Please enter a valid vote between 0 and 1000.", "error");
+            const vote = parseFloat(voteValue.value);
+            if (isNaN(vote) || vote < 0 || vote > 1) {
+                showStatus(voteStatus, "Please enter a valid vote between 0 and 1.", "error");
                 return;
             }
             
-            const voteBN = ethers.BigNumber.from(vote);
+            // Convert 0-1 scale to 0-1000 scale for the contract
+            const scaledVote = Math.round(vote * 1000);
             
             voteBtn.disabled = true;
             voteBtn.innerHTML = 'Voting... <span class="loader"></span>';
             showStatus(voteStatus, "Transaction in progress...", "warning");
             
-            const tx = await contract.vote(voteBN);
+            const tx = await contract.vote(scaledVote);
             
             showStatus(voteStatus, "Vote submitted. Waiting for confirmation...", "warning");
             
             const receipt = await tx.wait();
             
             if (receipt.status === 1) {
-                showStatus(voteStatus, `Successfully voted ${vote/10}%!`, "success");
+                showStatus(voteStatus, `Successfully voted ${(vote * 100).toFixed(1)}%!`, "success");
                 await refreshGameData();
             } else {
                 showStatus(voteStatus, "Voting failed. Please try again.", "error");
@@ -667,7 +668,9 @@ document.addEventListener('DOMContentLoaded', function() {
             roundStateInfo.textContent = roundStateLabels[roundState];
             userCount.textContent = usersCount;
             totalPool.textContent = poolTotal;
-            votingConstant.textContent = voteConstant === '0' ? '-' : `${(voteConstant / 10).toFixed(1)}%`;
+            
+            // Display voting constant as 0-1 instead of 0-1000
+            votingConstant.textContent = voteConstant === '0' ? '-' : `${(voteConstant / 1000).toFixed(2)} (${(voteConstant / 10).toFixed(1)}%)`;
             
             // Update round state display
             roundStateDisplay.textContent = `Round State: ${roundStateLabels[roundState]}`;
