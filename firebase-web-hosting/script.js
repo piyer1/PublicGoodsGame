@@ -274,8 +274,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Check if wallet is already connected
     async function checkWalletConnection() {
+        if (!window.ethereum) {
+            showStatus(purchaseStatus, "Please install MetaMask to use this dApp.", "error");
+            return;
+        }
         if (window.ethereum) {
-            provider = new ethers.providers.Web3Provider(window.ethereum);
+            provider = new ethersLib.providers.Web3Provider(window.ethereum);
             
             try {
                 // Check if we're already connected
@@ -293,12 +297,16 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Connect wallet
     async function connectWallet() {
+        if (!window.ethereum) {
+            showStatus(purchaseStatus, "Please install MetaMask to use this dApp.", "error");
+            return;
+        }
         if (window.ethereum) {
             try {
                 connectWalletBtn.disabled = true;
                 connectWalletBtn.innerHTML = 'Connecting... <span class="loader"></span>';
                 
-                provider = new ethers.providers.Web3Provider(window.ethereum);
+                provider = new ethersLib.providers.Web3Provider(window.ethereum);
                 
                 // Request account access
                 const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
