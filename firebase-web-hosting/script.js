@@ -1,3 +1,5 @@
+import { ethers } from "ethers";
+
 // GameCoin Public Goods Game - Main JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     // Contract ABI - Generated from Vyper contract
