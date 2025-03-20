@@ -1,3 +1,4 @@
+console.log("Ethers loaded:", typeof ethers !== 'undefined' ? ethers.version : 'not loaded');
 // GameCoin Public Goods Game - Main JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     // Contract ABI - Generated from Vyper contract
