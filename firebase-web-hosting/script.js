@@ -239,8 +239,21 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Initialize the application
     async function initApp() {
+        showStatus(purchaseStatus, "Initializing...", "warning");
         setupEventListeners();
+
+        // Check if MetaMask is installed
+        if (typeof window.ethereum === 'undefined') {
+            showStatus(purchaseStatus, "Please install MetaMask to use this dApp.", "error");
+            connectWalletBtn.disabled = true;
+            connectWalletBtn.textContent = 'MetaMask Not Detected';
+            return;
+        }
+
+        // Check if we already have an authorized connection
         await checkWalletConnection();
+        
+        showStatus(purchaseStatus, "Initialization complete", "success");
     }
 
     // Set up event listeners
@@ -270,30 +283,53 @@ document.addEventListener('DOMContentLoaded', function() {
                 document.getElementById(`${tabId}Tab`).classList.remove('hidden');
             });
         });
+
+        // Setup event listeners for MetaMask changes
+        if (window.ethereum) {
+            window.ethereum.on('accountsChanged', handleAccountsChanged);
+            window.ethereum.on('chainChanged', () => {
+                console.log("Network changed, reloading page...");
+                window.location.reload();
+            });
+            window.ethereum.on('disconnect', (error) => {
+                console.log("Wallet disconnected:", error);
+                resetUI();
+            });
+        }
     }
 
-    const ethersLib = window.ethers;
+    // Reset UI to disconnected state
+    function resetUI() {
+        userAddress = null;
+        walletNotConnected.classList.remove('hidden');
+        gameInterface.classList.add('hidden');
+        walletInfo.innerHTML = '<p>Not Connected</p>';
+        connectWalletBtn.textContent = 'Connect Wallet';
+        connectWalletBtn.disabled = false;
+    }
 
     // Check if wallet is already connected
     async function checkWalletConnection() {
-        if (!window.ethereum) {
-            showStatus(purchaseStatus, "Please install MetaMask to use this dApp.", "error");
-            return;
-        }
-        if (window.ethereum) {
-            provider = new ethersLib.providers.Web3Provider(window.ethereum);
+        if (!window.ethereum) return;
+
+        try {
+            // Try to detect the provider
+            provider = new ethers.providers.Web3Provider(window.ethereum);
             
-            try {
-                // Check if we're already connected
-                const accounts = await provider.listAccounts();
-                if (accounts.length > 0) {
-                    await onWalletConnected(accounts[0]);
-                }
-            } catch (error) {
-                console.error("Error checking wallet connection:", error);
+            // Check if we're already connected
+            const accounts = await provider.listAccounts();
+            if (accounts.length > 0) {
+                console.log("Already connected to account:", accounts[0]);
+                await onWalletConnected(accounts[0]);
+                return true;
+            } else {
+                console.log("No connected accounts found");
+                return false;
             }
-        } else {
-            showStatus(purchaseStatus, "Web3 wallet not detected. Please install MetaMask.", "error");
+        } catch (error) {
+            console.error("Error checking wallet connection:", error);
+            showStatus(purchaseStatus, "Error checking wallet connection", "error");
+            return false;
         }
     }
 
@@ -303,72 +339,101 @@ document.addEventListener('DOMContentLoaded', function() {
             showStatus(purchaseStatus, "Please install MetaMask to use this dApp.", "error");
             return;
         }
-        if (window.ethereum) {
-            try {
-                connectWalletBtn.disabled = true;
-                connectWalletBtn.innerHTML = 'Connecting... <span class="loader"></span>';
-                
-                provider = new ethersLib.providers.Web3Provider(window.ethereum);
-                
-                // Request account access
-                const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-                await onWalletConnected(accounts[0]);
-                
-                connectWalletBtn.disabled = false;
-                connectWalletBtn.textContent = 'Wallet Connected';
-            } catch (error) {
-                console.error("Error connecting wallet:", error);
-                showStatus(purchaseStatus, "Error connecting wallet. Please try again.", "error");
-                connectWalletBtn.disabled = false;
-                connectWalletBtn.textContent = 'Connect Wallet';
+
+        try {
+            connectWalletBtn.disabled = true;
+            connectWalletBtn.innerHTML = 'Connecting... <span class="loader"></span>';
+            showStatus(purchaseStatus, "Requesting wallet connection...", "warning");
+            
+            // Connect to provider
+            provider = new ethers.providers.Web3Provider(window.ethereum);
+            
+            // Request access to accounts
+            const accounts = await window.ethereum.request({ 
+                method: 'eth_requestAccounts' 
+            });
+            
+            if (accounts.length === 0) {
+                throw new Error("No accounts available or user rejected request");
             }
-        } else {
-            showStatus(purchaseStatus, "Web3 wallet not detected. Please install MetaMask.", "error");
+            
+            await onWalletConnected(accounts[0]);
+            showStatus(purchaseStatus, "Wallet connected successfully!", "success");
+            
+        } catch (error) {
+            console.error("Error connecting wallet:", error);
+            
+            // Handle specific errors
+            if (error.code === 4001) {
+                // User rejected the request
+                showStatus(purchaseStatus, "Connection rejected. Please try again.", "error");
+            } else {
+                showStatus(purchaseStatus, `Error connecting wallet: ${error.message}`, "error");
+            }
+            
+            connectWalletBtn.disabled = false;
+            connectWalletBtn.textContent = 'Connect Wallet';
+        }
+    }
+
+    // Handle account change in MetaMask
+    async function handleAccountsChanged(accounts) {
+        console.log("Accounts changed:", accounts);
+        
+        if (accounts.length === 0) {
+            // User disconnected their wallet
+            console.log("User disconnected wallet");
+            resetUI();
+            showStatus(purchaseStatus, "Wallet disconnected", "warning");
+        } else if (accounts[0] !== userAddress) {
+            // User switched to a different account
+            console.log("Switching to new account:", accounts[0]);
+            await onWalletConnected(accounts[0]);
+            showStatus(purchaseStatus, "Account changed", "warning");
         }
     }
 
     // After wallet is connected
     async function onWalletConnected(account) {
-        userAddress = account;
-        signer = provider.getSigner();
-        contract = new ethers.Contract(contractAddress, contractABI, signer);
-        
-        // Setup event listeners for wallet changes
-        window.ethereum.on('accountsChanged', handleAccountsChanged);
-        window.ethereum.on('chainChanged', () => window.location.reload());
-        
-        // Update UI
-        walletNotConnected.classList.add('hidden');
-        gameInterface.classList.remove('hidden');
-        
-        // Display wallet info
-        const shortenedAddress = `${account.substring(0, 6)}...${account.substring(account.length - 4)}`;
-        walletInfo.innerHTML = `
-            <div class="address">Address: ${shortenedAddress}</div>
-            <div class="balances">
-                <div>GameCoin: <span id="gameCoinBalance">Loading...</span></div>
-                <div>ETH: <span id="ethBalance">Loading...</span></div>
-            </div>
-        `;
-        
-        // Refresh game data
-        await refreshGameData();
-        
-        // Setup interval for periodic updates
-        setInterval(refreshGameData, 10000); // Refresh every 10 seconds
-    }
-
-    // Handle account change in MetaMask
-    async function handleAccountsChanged(accounts) {
-        if (accounts.length === 0) {
-            // User disconnected their wallet
-            window.location.reload();
-        } else {
-            // User switched accounts
-            userAddress = accounts[0];
+        try {
+            userAddress = account;
+            
+            // Initialize provider, signer and contract
+            provider = new ethers.providers.Web3Provider(window.ethereum);
             signer = provider.getSigner();
             contract = new ethers.Contract(contractAddress, contractABI, signer);
+            
+            // Get network information
+            const network = await provider.getNetwork();
+            console.log("Connected to network:", network.name, `(${network.chainId})`);
+            
+            // Update UI
+            walletNotConnected.classList.add('hidden');
+            gameInterface.classList.remove('hidden');
+            connectWalletBtn.textContent = 'Wallet Connected';
+            
+            // Display wallet info with network
+            const shortenedAddress = `${account.substring(0, 6)}...${account.substring(account.length - 4)}`;
+            const networkName = network.name !== 'unknown' ? network.name : `Chain ID: ${network.chainId}`;
+            
+            walletInfo.innerHTML = `
+                <div class="address">Address: ${shortenedAddress}</div>
+                <div class="network">Network: ${networkName}</div>
+                <div class="balances">
+                    <div>GameCoin: <span id="gameCoinBalance">Loading...</span></div>
+                    <div>ETH: <span id="ethBalance">Loading...</span></div>
+                </div>
+            `;
+            
+            // Refresh game data
             await refreshGameData();
+            
+            // Setup interval for periodic updates
+            setInterval(refreshGameData, 10000); // Refresh every 10 seconds
+            
+        } catch (error) {
+            console.error("Error in onWalletConnected:", error);
+            showStatus(purchaseStatus, `Error initializing connection: ${error.message}`, "error");
         }
     }
 
@@ -687,10 +752,13 @@ document.addEventListener('DOMContentLoaded', function() {
                     if (error.message && error.message.includes("insufficient funds")) {
                         return "Insufficient funds for transaction";
                     }
+                    break;
+                case -32002:
+                    return "Request already pending. Check MetaMask";
             }
         }
         
-        return "Transaction failed";
+        return error.message || "Transaction failed";
     }
 
     // Initialize the app when document is loaded
