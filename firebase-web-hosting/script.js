@@ -1,5 +1,11 @@
-console.log("Ethers loaded:", typeof ethers !== 'undefined' ? ethers.version : 'not loaded');
-console.log("Ethers providers:", ethers.providers);
+console.log("Ethers loaded:", typeof ethers !== 'undefined');
+if (ethers) {
+    console.log("Ethers version:", ethers.version);
+    console.log("Ethers providers:", ethers.providers);
+    console.log("Web3Provider:", ethers.providers?.Web3Provider);
+} else {
+    console.error("Ethers not loaded.");
+}
 // GameCoin Public Goods Game - Main JavaScript
 document.addEventListener('DOMContentLoaded', function() {
     // Contract ABI - Generated from Vyper contract
