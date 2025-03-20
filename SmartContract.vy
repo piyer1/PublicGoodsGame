@@ -1,4 +1,3 @@
-#pragma version 0.4.0
 # Public Goods Game with GameCoin, staking, weighted voting, and redistribution
 
 # Constants
@@ -80,6 +79,7 @@ rounds: public(HashMap[uint256, Round])
 isRoundActive: public(bool)
 
 # Initialize contract
+@payable
 @deploy
 def __init__():
     self.owner = msg.sender
@@ -114,6 +114,8 @@ def purchaseGameCoin(ethAmount: uint256):
     
     # Add GameCoin to user's balance
     self.users[msg.sender].balance += gameCoinAmount
+
+    assert self.users[msg.sender].balance >= gameCoinAmount, "Transaction was unsuccessful"
     
     log GameCoinPurchased(msg.sender, ethAmount, gameCoinAmount)
 
@@ -328,8 +330,8 @@ def _completeRound():
 # View functions
 @view
 @external
-def getGameCoinBalance(user: address) -> uint256:
-    return self.users[user].balance
+def getGameCoinBalance() -> uint256:
+    return self.users[msg.sender].balance // 1000000000000000000
 
 @view
 @external
