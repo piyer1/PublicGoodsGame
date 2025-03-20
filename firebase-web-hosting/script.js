@@ -313,11 +313,11 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!window.ethereum) return;
 
         try {
-            // Try to detect the provider
-            provider = new ethers.providers.Web3Provider(window.ethereum);
+            // Try to detect the provider - using v6 syntax
+            provider = new ethers.BrowserProvider(window.ethereum);
             
             // Check if we're already connected
-            const accounts = await provider.listAccounts();
+            const accounts = await window.ethereum.request({ method: 'eth_accounts' });
             if (accounts.length > 0) {
                 console.log("Already connected to account:", accounts[0]);
                 await onWalletConnected(accounts[0]);
@@ -345,8 +345,8 @@ document.addEventListener('DOMContentLoaded', function() {
             connectWalletBtn.innerHTML = 'Connecting... <span class="loader"></span>';
             showStatus(purchaseStatus, "Requesting wallet connection...", "warning");
             
-            // Connect to provider
-            provider = new ethers.providers.Web3Provider(window.ethereum);
+            // Connect to provider - using v6 syntax
+            provider = new ethers.BrowserProvider(window.ethereum);
             
             // Request access to accounts
             const accounts = await window.ethereum.request({ 
@@ -398,9 +398,9 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             userAddress = account;
             
-            // Initialize provider, signer and contract
-            provider = new ethers.providers.Web3Provider(window.ethereum);
-            signer = provider.getSigner();
+            // Initialize provider, signer and contract - using v6 syntax
+            provider = new ethers.BrowserProvider(window.ethereum);
+            signer = await provider.getSigner(); // getSigner is now async in v6
             contract = new ethers.Contract(contractAddress, contractABI, signer);
             
             // Get network information
@@ -446,7 +446,8 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
             
-            const ethAmountWei = ethers.utils.parseEther(amount);
+            // Using v6 syntax for parsing ether
+            const ethAmountWei = ethers.parseEther(amount);
             
             purchaseBtn.disabled = true;
             purchaseBtn.innerHTML = 'Processing... <span class="loader"></span>';
@@ -634,9 +635,9 @@ document.addEventListener('DOMContentLoaded', function() {
         if (!userAddress || !contract) return;
         
         try {
-            // Get ETH balance
+            // Get ETH balance - using v6 syntax
             const ethBalance = await provider.getBalance(userAddress);
-            const ethBalanceFormatted = parseFloat(ethers.utils.formatEther(ethBalance)).toFixed(4);
+            const ethBalanceFormatted = parseFloat(ethers.formatEther(ethBalance)).toFixed(4);
             
             // Get GameCoin balance
             const gcBalance = await contract.getGameCoinBalance();
