@@ -272,6 +272,8 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
+    const ethersLib = window.ethers;
+
     // Check if wallet is already connected
     async function checkWalletConnection() {
         if (!window.ethereum) {
